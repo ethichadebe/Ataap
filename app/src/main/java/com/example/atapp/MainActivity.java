@@ -1,5 +1,6 @@
 package com.example.atapp;
 
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
@@ -80,100 +81,114 @@ public class MainActivity extends AppCompatActivity {
 
         artViewModel.makeAPICall();
 
-        artViewModel.getArt().observe(this, new Observer<Art>() {
-            @Override
-            public void onChanged(Art art) {
-                if (art != null) {
-                    clFirstBackground.setBackgroundColor(Color.rgb(extractColors(art.getMuted())[0],
-                            extractColors(art.getMuted())[1],
-                            extractColors(art.getMuted())[2]));
-                    bottomSheet.setBackgroundColor(Color.rgb(extractColors(art.getMuted())[0],
-                            extractColors(art.getMuted())[1],
-                            extractColors(art.getMuted())[2]));
-                    animationView.addValueCallback(
-                            new KeyPath("**"),
-                            LottieProperty.COLOR_FILTER,
-                            new SimpleLottieValueCallback<ColorFilter>() {
-                                @Override
-                                public ColorFilter getValue(LottieFrameInfo<ColorFilter> frameInfo) {
-                                    return new PorterDuffColorFilter(Color.rgb(extractColors(art.getVibrant())[0],
-                                            extractColors(art.getVibrant())[1],
-                                            extractColors(art.getVibrant())[2]), PorterDuff.Mode.SRC_ATOP);
-                                }
-                            }
-                    );
+        artViewModel.getArt().observe(this, art -> {
+            if (art != null) {
+                String mBackgroundColor, mForegroundColor;
 
-                    lavLoader.setVisibility(View.VISIBLE);
-                    Glide
-                            .with(getApplicationContext())
-                            .load(art.getImage())
-                            .listener(new RequestListener<Drawable>() {
-                                @Override
-                                public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
-                                    lavLoader.setVisibility(View.GONE);
-                                    tvTitle.setTextColor(Color.rgb(extractColors(art.getVibrant())[0],
-                                            extractColors(art.getVibrant())[1],
-                                            extractColors(art.getVibrant())[2]));
-                                    tvArtist.setTextColor(Color.rgb(extractColors(art.getVibrant())[0],
-                                            extractColors(art.getVibrant())[1],
-                                            extractColors(art.getVibrant())[2]));
-                                    tvDescription.setTextColor(Color.rgb(extractColors(art.getVibrant())[0],
-                                            extractColors(art.getVibrant())[1],
-                                            extractColors(art.getVibrant())[2]));
-                                    tvSmartifyLink.setTextColor(Color.rgb(extractColors(art.getVibrant())[0],
-                                            extractColors(art.getVibrant())[1],
-                                            extractColors(art.getVibrant())[2]));
-
-                                    tvTitle.setText(art.getTitle());
-                                    tvArtist.setText(art.getArtist() + "\n\n\n\n");
-                                    tvDescription.setText(art.getDescription());
-                                    tvSmartifyLink.setText("Read more on SMARTIFY.");
-                                    return false;
-                                }
-                            })
-                            .override(2000, 2000)
-                            .into(ivArt)
-                            .getSize((width, height) -> {
-                                //before you load image LOG height and width that u actually got?
-                                Log.d(TAG, "onResourceReady: Image: " + art.getTitle() + " Height: " + height + " Width: " + width);
-                            });
-
-                    mBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
-                        @Override
-                        public void onStateChanged(@NonNull View bottomSheet, int newState) {
-                            if (mBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
-                                animationView.setMinAndMaxProgress(0.5f, 1.0f);
-                            } else {
-                                animationView.setMinAndMaxProgress(0.0f, 0.5f);
-                            }
-                            animationView.playAnimation();
-                        }
-
-                        @Override
-                        public void onSlide(@NonNull View bottomSheet, float slideOffset) {
-
-                        }
-                    });
-
-                    animationView.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            if (mBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
-                                mBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                            } else if (mBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
-                                mBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                            }
-                        }
-                    });
+                mBackgroundColor = art.getVibrant();
+                mForegroundColor = art.getMuted();
+                int currentNightMode = getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK;
+                switch (currentNightMode) {
+                    case Configuration.UI_MODE_NIGHT_NO:
+                        // Night mode is not active, we're in day time
+                        mBackgroundColor = art.getVibrant();
+                        mForegroundColor = art.getMuted();
+                        break;
+                    case Configuration.UI_MODE_NIGHT_YES:
+                    case Configuration.UI_MODE_NIGHT_UNDEFINED:
+                        // Night mode is active, we're at night!
+                        mBackgroundColor = art.getMuted();
+                        mForegroundColor = art.getVibrant();
+                        break;
                 }
+                clFirstBackground.setBackgroundColor(Color.rgb(extractColors(mBackgroundColor)[0],
+                        extractColors(mBackgroundColor)[1],
+                        extractColors(mBackgroundColor)[2]));
+                bottomSheet.setBackgroundColor(Color.rgb(extractColors(mBackgroundColor)[0],
+                        extractColors(mBackgroundColor)[1],
+                        extractColors(mBackgroundColor)[2]));
+                String finalMForegroundColor = mForegroundColor;
+                animationView.addValueCallback(
+                        new KeyPath("**"),
+                        LottieProperty.COLOR_FILTER,
+                        frameInfo -> new PorterDuffColorFilter(Color.rgb(extractColors(finalMForegroundColor)[0],
+                                extractColors(finalMForegroundColor)[1],
+                                extractColors(finalMForegroundColor)[2]), PorterDuff.Mode.SRC_ATOP)
+                );
+
+                lavLoader.setVisibility(View.VISIBLE);
+                String finalMForegroundColor1 = mForegroundColor;
+                Glide
+                        .with(getApplicationContext())
+                        .load(art.getImage())
+                        .listener(new RequestListener<Drawable>() {
+                            @Override
+                            public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                                lavLoader.setVisibility(View.GONE);
+                                tvTitle.setTextColor(Color.rgb(extractColors(finalMForegroundColor1)[0],
+                                        extractColors(finalMForegroundColor1)[1],
+                                        extractColors(finalMForegroundColor1)[2]));
+                                tvArtist.setTextColor(Color.rgb(extractColors(finalMForegroundColor1)[0],
+                                        extractColors(finalMForegroundColor1)[1],
+                                        extractColors(finalMForegroundColor1)[2]));
+                                tvDescription.setTextColor(Color.rgb(extractColors(finalMForegroundColor1)[0],
+                                        extractColors(finalMForegroundColor1)[1],
+                                        extractColors(finalMForegroundColor1)[2]));
+                                tvSmartifyLink.setTextColor(Color.rgb(extractColors(finalMForegroundColor1)[0],
+                                        extractColors(finalMForegroundColor1)[1],
+                                        extractColors(finalMForegroundColor1)[2]));
+
+                                tvTitle.setText(art.getTitle());
+                                tvArtist.setText(art.getArtist() + "\n\n\n\n");
+                                tvDescription.setText(art.getDescription());
+                                tvSmartifyLink.setText("Read more on SMARTIFY..org");
+                                return false;
+                            }
+                        })
+                        .override(2000, 2000)
+                        .into(ivArt)
+                        .getSize((width, height) -> {
+                            //before you load image LOG height and width that u actually got?
+                            Log.d(TAG, "onResourceReady: Image: " + art.getTitle() + " Height: " + height + " Width: " + width);
+                        });
+
+                mBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+                    @Override
+                    public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                        if (mBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+                            animationView.setMinAndMaxProgress(0.5f, 1.0f);
+                        } else {
+                            animationView.setMinAndMaxProgress(0.0f, 0.5f);
+                        }
+                        animationView.playAnimation();
+                    }
+
+                    @Override
+                    public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+
+                    }
+                });
+
+                animationView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (mBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+                            mBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                        } else if (mBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
+                            mBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                        }
+                    }
+                });
             }
         });
     }
+
 
     private int[] extractColors(String rgb) {
         int[] colorRGB = new int[3];
